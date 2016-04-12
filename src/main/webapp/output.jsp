@@ -1,7 +1,8 @@
 <%@ page import="compiler.Tables" %>
 <%@ page import="java.util.HashMap" %>
 <%@ page import="java.util.Set" %>
-<%@ page import="java.util.ArrayList" %><%--
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="compiler.Lexeme" %><%--
   Created by IntelliJ IDEA.
   User: santos
   Date: 17.03.16
@@ -17,7 +18,7 @@
 <body>
 <%
     Tables tables = (Tables) session.getAttribute("tables");
-    ArrayList<Integer> result = (ArrayList<Integer>) session.getAttribute("result");
+    ArrayList<Lexeme> result = (ArrayList<Lexeme>) session.getAttribute("result");
     HashMap<String, Integer> keyWord = tables.getKeyWords();
     HashMap<String, Integer> identifiers = tables.getIdentifiersTable();
     HashMap<String, Integer> constants = tables.getConstTable();
@@ -90,8 +91,9 @@
         </table>
     </div>
     <div class="result">
-        <%for (Integer code: result) {%>
-            <span><%=code%></span>
+        <%for (Lexeme code: result) {%>
+            <span><%=code.getLexCode()%> :
+                [<%=code.getStringIndex()%>, <%=code.getCharIndex()%>]</span>
         <%}%>
     </div>
 </section>

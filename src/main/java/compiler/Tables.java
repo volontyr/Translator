@@ -7,10 +7,8 @@ import java.util.HashMap;
  */
 public class Tables {
 
-    private static int keyWordsCode;
     private static int identifiersCode;
     private static int constCode;
-    private static int multiCharDelimitersCode;
 
     private HashMap<Character, Integer> attributes;
     private HashMap<String, Integer> keyWords;
@@ -24,8 +22,8 @@ public class Tables {
         this.multiCharDelimiters = new HashMap<>();
 
         /*initializing*/
-        multiCharDelimitersCode = 301;
-        keyWordsCode = 401;
+        int multiCharDelimitersCode = 301;
+        int keyWordsCode = 401;
         constCode = 501;
         identifiersCode = 1001;
 

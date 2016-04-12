@@ -8,88 +8,116 @@ import java.util.ArrayList;
  */
 public class LexicalParser implements Parser {
     private InputStreamReader file;
-    private String[] keyWords = {"BEGIN", "END", "PROGRAM", "CONST"};
-    private String[] multiCharDelimiters = {":=", "<=", ">=", "<>"};
-    private ArrayList<Integer> lexCodesResultArray;
+    private ArrayList<Lexeme> lexCodesResultArray;
     private int charIndex;
+    private int stringIndex;
     private Tables tables;
 
 
     public LexicalParser(InputStream file) {
         this.file = new InputStreamReader(file);
+        String[] multiCharDelimiters = {":=", "<=", ">=", "<>"};
+        String[] keyWords = {"BEGIN", "END", "PROGRAM", "CONST"};
         tables = new Tables(keyWords, multiCharDelimiters);
         lexCodesResultArray = new ArrayList<>();
     }
 
-    public void addLexCode(int lexCode) {
-        if (lexCode != 0)
-            lexCodesResultArray.add(lexCode);
+    public void addLexCode(int lexCode, String lexeme) {
+        lexCodesResultArray.add(new Lexeme(
+                lexCode, stringIndex, charIndex - lexeme.length() + 1
+        ));
     }
 
     public Tables getTables() {
         return tables;
     }
 
-    public ArrayList<Integer> getLexCodesResultArray() {
+    public ArrayList<Lexeme> getLexCodesResultArray() {
         return lexCodesResultArray;
     }
 
     @Override
     public void parser() {
-        String currentStr;
+        int symbol;
 
         try (BufferedReader reader = new BufferedReader(file)) {
+            charIndex = 0;
+            stringIndex = 0;
+            symbol = reader.read();
+            while (symbol != -1) {
 
-            while ((currentStr = reader.readLine()) != null) {
-                charIndex = 0;
-                while (charIndex < currentStr.length()) {
-                    switch (tables.getAttribute(currentStr.charAt(charIndex))) {
-                        case 0:
-                            charIndex = whitespaceHandling(currentStr, charIndex);
-                            break;
-                        case 1:
-                            charIndex = constHandling(currentStr, charIndex);
-                            break;
-                        case 2:
-                            charIndex = identifierHandling(currentStr, charIndex);
-                            break;
-                        case 3:
-                            currentStr = commentHandling(reader, currentStr + "\n", charIndex);
-                            charIndex = 0;
-                            break;
-                        case 4:
-                            charIndex = checkForMultiDelimiter(currentStr, charIndex);
-                            break;
-                        case 5:
-                            charIndex++;
-                            addLexCode(-1);
-                            showError("Illegal symbol");
+                switch (tables.getAttribute((char) symbol)) {
+                    case 0:
+                        symbol = whitespaceHandling(reader, symbol);
+                        break;
+                    case 1:
+                        symbol = constHandling(reader, symbol);
+                        break;
+                    case 2:
+                        symbol = identifierHandling(reader, symbol);
+                        break;
+                    case 3:
+                        commentHandling(reader, symbol);
+                        symbol = reader.read();
+                        break;
+                    case 4:
+                        symbol = checkForMultiDelimiter(reader, symbol);
+                        break;
+                    case 5:
+                        String buffer = "" + (char) symbol;
+                        addLexCode(-1, buffer);
+                        symbol = reader.read();
+                        showError("Illegal symbol");
 
-                        default:
-                            break;
-                    }
-
+                    default:
+                        break;
                 }
+                charIndex++;
+                if ((char) symbol == '\n') {
+                    do {
+                        charIndex = 0;
+                        stringIndex++;
+                    } while ((char)(symbol = reader.read()) == '\n');
+                }
+
             }
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
     }
 
-    public int whitespaceHandling(String str, int index) {
-        while (++index < str.length() &&
-                tables.getAttribute(str.charAt(index)) == 0);
-        return index;
+    public int whitespaceHandling(BufferedReader r, int symbol) {
+        try {
+            while ((symbol = r.read()) != -1 &&
+                    tables.getAttribute((char) symbol) == 0) {
+                charIndex++;
+                if ((char) symbol == '\n') {
+                    charIndex = 0;
+                    stringIndex++;
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return symbol;
     }
 
-    public int constHandling(String str, int index) {
+    public int constHandling(BufferedReader r, int symbol) {
         String buffer = "";
         int lexCode;
 
-        buffer += str.charAt(index);
-        while (++index < str.length() &&
-                tables.getAttribute(str.charAt(index)) == 1) {
-            buffer += str.charAt(index);
+        buffer += (char) symbol;
+
+        try {
+            while ((symbol = r.read()) != -1 &&
+                    tables.getAttribute((char) symbol) == 1) {
+                charIndex++;
+                buffer += (char) symbol;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         if (tables.constTableSearch(buffer))
@@ -97,21 +125,26 @@ public class LexicalParser implements Parser {
         else
             lexCode = tables.constTableAdd(buffer);
 
-        addLexCode(lexCode);
+        addLexCode(lexCode, buffer);
 
-        return index;
+        return symbol;
     }
 
-    public int identifierHandling(String str, int index) {
+    public int identifierHandling(BufferedReader r, int symbol) {
         String buffer = "";
         int lexCode;
 
-        buffer += str.charAt(index);
+        buffer += (char) symbol;
 
-        while (++index < str.length() &&
-                (tables.getAttribute(str.charAt(index)) == 2 ||
-                tables.getAttribute(str.charAt(index)) == 1)) {
-            buffer += str.charAt(index);
+        try {
+            while ((symbol = r.read()) != -1 &&
+                    (tables.getAttribute((char) symbol) == 2 ||
+                            tables.getAttribute((char) symbol) == 1)) {
+                charIndex++;
+                buffer += (char) symbol;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         buffer = buffer.toUpperCase();
@@ -124,66 +157,76 @@ public class LexicalParser implements Parser {
             else
                 lexCode = tables.identifierTableAdd(buffer);
 
-        addLexCode(lexCode);
+        addLexCode(lexCode, buffer);
 
-        return index;
+        return symbol;
     }
 
-    public String commentHandling(BufferedReader r, String str, int index) {
-        String restOfString = "", errMessage = "";
+    public void commentHandling(BufferedReader r, int symbol) {
+        String errMessage = "";
+        int c;
+        int commentStartStringIndex = stringIndex;
+        int commentStartCharIndex = charIndex;
 
-        if (index + 1 == str.length())
-            addLexCode((int) str.charAt(index));
-        else
-            if (str.charAt(++index) == '*') {
-                ++index;
-                do {
-                    while (index < str.length() && str.charAt(index) != '*') ++index;
-                    if (index >= str.length())
-                        try {
-                            while ((str = r.readLine() + "\n").equals("\n"));
-                            if (str.equals("null\n")) {
-                                addLexCode(-1);
-                                errMessage = "*) expected but end of file found";
-                                break;
-                            } else {
-                                index = 0;
+        try {
+            if ((c = r.read()) == -1)
+                addLexCode(symbol, "" + (char) symbol);
+            else
+                if ((char) c == '*') {
+                    charIndex++;
+                    do {
+                        do {
+                            charIndex++;
+                            if ((char) c == '\n') {
+                                charIndex = 0;
+                                stringIndex++;
                             }
-                        } catch (IOException ioe) {
-                            ioe.printStackTrace();
+                        } while ((c = r.read()) != -1 && (char) c != '*');
+                        while ((c = r.read()) != -1 && (char) c == '*') charIndex++;
+                        if (c == -1) {
+                            stringIndex = commentStartStringIndex;
+                            charIndex = commentStartCharIndex;
+                            addLexCode(-1, "");
+                            errMessage = "*) expected but end of file found";
+                            break;
                         }
-                } while (str.charAt(index) != '*' || str.charAt(++index) != ')');
-            } else {
-                index--;
-                addLexCode((int) str.charAt(index));
-            }
-
-        if (str != null && ++index < str.length())
-            restOfString = str.substring(index, str.length());
+                    } while ((char) c != ')');
+                } else {
+                    addLexCode(c, "" + (char) c);
+                }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         if (!errMessage.equals(""))
             showError(errMessage);
-
-        return restOfString;
     }
 
-    public int checkForMultiDelimiter(String str, int index) {
+    public int checkForMultiDelimiter(BufferedReader r, int symbol) {
         String buffer = "";
-        int lexCode;
+        int lexCode = symbol;
 
-        buffer += str.charAt(index);
-        if (++index < str.length())
-            buffer += str.charAt(index);
+        buffer += (char) symbol;
+        try {
+            if ((symbol = r.read()) != -1) {
+                buffer += (char) symbol;
+                charIndex++;
+            }
 
-        if (tables.multiDelimiterSearch(buffer)) {
-            lexCode = tables.multiDelimiterCode(buffer);
-            ++index;
-        } else
-            lexCode = (int) buffer.charAt(0);
+            if (tables.multiDelimiterSearch(buffer)) {
+                lexCode = tables.multiDelimiterCode(buffer);
+                symbol = r.read();
+            }
+            else {
+                buffer = "" + buffer.charAt(0);
+                charIndex--;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        addLexCode(lexCode, buffer);
 
-
-        addLexCode(lexCode);
-        return index;
+        return symbol;
     }
 
     public void showError(String message) {
