@@ -1,6 +1,7 @@
 package servlet;
 
 import compiler.LexicalParser;
+import compiler.SyntaxParser;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,8 +24,11 @@ public class CompileServlet extends javax.servlet.http.HttpServlet {
         InputStream is = file.getInputStream();
         LexicalParser lexicalParser = new LexicalParser(is);
         lexicalParser.parser();
+        SyntaxParser syntaxParser = new SyntaxParser(lexicalParser.getLexCodesResultArray(),
+                    lexicalParser.getTables());
+        syntaxParser.parser();
         HttpSession session = request.getSession();
-        session.setAttribute("tables",lexicalParser.getTables());
+        session.setAttribute("tables", lexicalParser.getTables());
         session.setAttribute("result", lexicalParser.getLexCodesResultArray());
         response.sendRedirect("output.jsp");
         return;
