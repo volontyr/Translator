@@ -1,5 +1,17 @@
 package compiler;
 
+import javax.xml.parsers.*;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.dom.*;
+import javax.xml.transform.stream.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -25,20 +37,28 @@ public class SyntaxParser implements Parser {
     private final int UNSIGNED_INTEGER = -15;
 
     private ArrayList<Lexeme> resultArray;
+    private ArrayList<String> errors;
     private Tables tables;
     private HashMap<String, Integer> identifiersTable;
     private HashMap<String, Integer> constTable;
     private Tree<Integer> parseTree;
+    private String fileXML;
 
     public SyntaxParser(ArrayList<Lexeme> resultArray, Tables tables) {
         this.resultArray = resultArray;
         this.tables = tables;
+        this.fileXML = "/home/santos/IdeaProjects/Translator/src/main/webapp/resources/tree.xml";
+        errors = new ArrayList<>();
         constTable = new HashMap<>();
         identifiersTable = new HashMap<>(tables.getIdentifiersTable());
         parseTree = new Tree<>(SIGNAL_PROGRAM);
         for (String identifier : identifiersTable.keySet()) {
             identifiersTable.put(identifier, null);
         }
+    }
+
+    public ArrayList<String> getErrors() {
+        return errors;
     }
 
     @Override
@@ -53,6 +73,10 @@ public class SyntaxParser implements Parser {
         while (!errorFlag && !programEnd) {
             switch (address) {
                 case 0:
+                    if (!hasNext(pointer + 2)) {
+                        errorFlag = true;
+                        break;
+                    }
                     if (resultArray.get(pointer).getLexCode() == 403) {
                         pointer++;
                         currentNode = parseTree.addChild(PROGRAM);
@@ -83,6 +107,11 @@ public class SyntaxParser implements Parser {
                     }
                     break;
                 case 1:
+                    if (!hasNext(pointer + 1)) {
+                        errorFlag = true;
+                        break;
+                    }
+
                     currentNode = currentNode.addChild(BLOCK);
                     blockNode = currentNode;
 
@@ -103,7 +132,7 @@ public class SyntaxParser implements Parser {
                     }
                     break;
                 case 2:
-                    if (resultArray.get(pointer).getLexCode() == 401) {
+                    if (hasNext(pointer) && resultArray.get(pointer).getLexCode() == 401) {
                         copyConstants();
                         address = 3;
                         pointer++;
@@ -111,7 +140,10 @@ public class SyntaxParser implements Parser {
                         currentNode = blockNode.addChild(STATEMENTS_LIST);
                         break;
                     }
-
+                    if (!hasNext(pointer + 3)) {
+                        errorFlag = true;
+                        break;
+                    }
                     if (resultArray.get(pointer).getLexCode() > 1000) {
                         buffer = findIdentifier(tables.getIdentifiersTable(),
                                 resultArray.get(pointer).getLexCode());
@@ -159,13 +191,16 @@ public class SyntaxParser implements Parser {
 
                     break;
                 case 3:
-                    if (resultArray.get(pointer).getLexCode() == 402) {
+                    if (hasNext(pointer) && resultArray.get(pointer).getLexCode() == 402) {
                         address = -1;
                         pointer++;
                         blockNode.addChild(402);
                         break;
                     }
-
+                    if (!hasNext(pointer + 3)) {
+                        errorFlag = true;
+                        break;
+                    }
                     if (resultArray.get(pointer).getLexCode() > 1000) {
                         buffer = findIdentifier(tables.getIdentifiersTable(),
                                 resultArray.get(pointer).getLexCode());
@@ -213,8 +248,8 @@ public class SyntaxParser implements Parser {
 
                     break;
                 default:
-                    if (resultArray.get(pointer).getLexCode() == 46)
-                        if (resultArray.size() == pointer + 1) {
+                    if (hasNext(pointer) && resultArray.get(pointer).getLexCode() == 46)
+                        if (!hasNext(pointer + 1)) {
                             programEnd = true;
                             break;
                         }
@@ -222,11 +257,17 @@ public class SyntaxParser implements Parser {
                     break;
             }
             if (errorFlag) {
-                System.out.println("error in line " + resultArray.get(pointer).getStringIndex() +
-                " and column " + resultArray.get(pointer).getCharIndex());
+                if (!hasNext(pointer))
+                    pointer--;
+                errors.add("error in line " + resultArray.get(pointer).getStringIndex() +
+                            " and column " + resultArray.get(pointer).getCharIndex());
             }
         }
+        buildXMLTree();
+    }
 
+    public boolean hasNext(int index) {
+        return resultArray.size() > index;
     }
 
     public boolean addConstToTable(int pointer, String buffer) {
@@ -259,5 +300,115 @@ public class SyntaxParser implements Parser {
         }
         for (String key : keys)
             identifiersTable.remove(key);
+    }
+
+    public void buildXMLTree() {
+        Document dom;
+        Element e;
+        Tree<Integer> currentNode;
+
+        // instance of a DocumentBuilderFactory
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        try {
+            // use factory to get an instance of document builder
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            // create instance of DOM
+            dom = db.newDocument();
+
+            // create the root element
+            Element rootElem = dom.createElement("non-terminal");
+            rootElem.setAttribute("name", "SIGNAL-PROGRAM");
+            e = rootElem;
+
+            if (!parseTree.isLeaf()) {
+                currentNode = parseTree.getChildren().get(0);
+                parseTree(currentNode, rootElem, dom);
+            }
+
+            dom.appendChild(e);
+
+            try (FileOutputStream xmlFile = new FileOutputStream(fileXML)) {
+                Transformer tr = TransformerFactory.newInstance().newTransformer();
+                tr.setOutputProperty(OutputKeys.INDENT, "yes");
+                tr.setOutputProperty(OutputKeys.METHOD, "xml");
+                tr.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+                tr.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+                // send DOM to file
+                tr.transform(new DOMSource(dom),
+                        new StreamResult(xmlFile));
+            } catch (TransformerException | IOException te) {
+                System.out.println(te.getMessage());
+            }
+        } catch (ParserConfigurationException pce) {
+            System.out.println("UsersXML: Error trying to instantiate DocumentBuilder " + pce);
+        }
+    }
+
+    public void parseTree(Tree<Integer> currentNode, Element rootElem, Document dom) {
+        String textNode;
+        Element e;
+        if (currentNode.getData() < 0) {
+            e = dom.createElement("non-terminal");
+        }
+        else {
+            e = dom.createElement("terminal");
+        }
+        switch (currentNode.getData()) {
+            case -2:
+                textNode = "PROGRAM";
+                break;
+            case -3:
+                textNode = "BLOCK";
+                break;
+            case -4:
+                textNode = "DECLARATIONS";
+                break;
+            case -5:
+                textNode = "CONSTANT-DECLARATIONS";
+                break;
+            case -6:
+                textNode = "CONSTANT-DECLARATIONS-LIST";
+                break;
+            case -7:
+                textNode = "CONSTANT-DECLARATION";
+                break;
+            case -8:
+                textNode = "CONSTANT-IDENTIFIER";
+                break;
+            case -9:
+                textNode = "CONSTANT";
+                break;
+            case -10:
+                textNode = "STATEMENTS-LIST";
+                break;
+            case -11:
+                textNode = "STATEMENT";
+                break;
+            case -12:
+                textNode = "VARIABLE-IDENTIFIER";
+                break;
+            case -13:
+                textNode = "PROCEDURE-IDENTIFIER";
+                break;
+            case -14:
+                textNode = "IDENTIFIER";
+                break;
+            case -15:
+                textNode = "UNSIGNED-INTEGER";
+                break;
+            default:
+                textNode = currentNode.getData().toString();
+                break;
+        }
+        e.setAttribute("name", textNode);
+        rootElem.appendChild(e);
+
+        if (!currentNode.isLeaf()) {
+            rootElem = e;
+            for (Tree<Integer> node : currentNode.getChildren()) {
+                parseTree(node, rootElem, dom);
+            }
+        }
     }
 }
