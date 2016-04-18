@@ -1,0 +1,35 @@
+body {
+    background-color: lightslategrey;
+}
+#buttons {
+    margin-top: 10px;
+    margin-left: 10px;
+    float: left;
+}
+#buttons .btn {
+    margin-top: 10px;
+}
+.my-container {
+    background-color: lightslategrey;
+    margin: 0 auto;
+    width: 85%;
+}
+#tree {
+    float: right;
+    width: 85%;
+    min-height: 500px;
+    margin: 10px auto;
+    background-color: lightgrey;
+}
+ul {
+    cursor: pointer;
+}
+.non-terminal {
+    font: 18px Ubuntu;
+    font-weight: bold;
+}
+.terminal {
+    font: 14px Ubuntu;
+    font-weight: normal;
+    display: block;
+}
