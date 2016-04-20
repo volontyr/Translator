@@ -9,6 +9,7 @@ import java.util.ArrayList;
 public class LexicalParser implements Parser {
     private InputStreamReader file;
     private ArrayList<Lexeme> lexCodesResultArray;
+    private ArrayList<String> errors;
     private int charIndex;
     private int stringIndex;
     private Tables tables;
@@ -16,16 +17,21 @@ public class LexicalParser implements Parser {
 
     public LexicalParser(InputStream file) {
         this.file = new InputStreamReader(file);
-        String[] multiCharDelimiters = {":=", "<=", ">=", "<>"};
+        String[] multiCharDelimiters = {":="};
         String[] keyWords = {"BEGIN", "END", "PROGRAM", "CONST"};
         tables = new Tables(keyWords, multiCharDelimiters);
         lexCodesResultArray = new ArrayList<>();
+        errors = new ArrayList<>();
     }
 
     public void addLexCode(int lexCode, String lexeme) {
-        lexCodesResultArray.add(new Lexeme(
-                lexCode, stringIndex, charIndex - lexeme.length() + 1
-        ));
+        if (lexCode == -1) {
+            errors.add(lexeme);
+        } else {
+            lexCodesResultArray.add(new Lexeme(
+                    lexCode, stringIndex, charIndex - lexeme.length() + 1
+            ));
+        }
     }
 
     public Tables getTables() {
@@ -34,6 +40,10 @@ public class LexicalParser implements Parser {
 
     public ArrayList<Lexeme> getLexCodesResultArray() {
         return lexCodesResultArray;
+    }
+
+    public ArrayList<String> getErrors() {
+        return errors;
     }
 
     @Override
@@ -57,14 +67,18 @@ public class LexicalParser implements Parser {
                         symbol = identifierHandling(reader, symbol);
                         break;
                     case 3:
-                        commentHandling(reader, symbol);
-                        symbol = reader.read();
+                        symbol = commentHandling(reader, symbol);
+//                        symbol = reader.read();
                         break;
                     case 4:
+                        if ((char) symbol == '-') {
+                            symbol = constHandling(reader, symbol);
+                            break;
+                        }
                         symbol = checkForMultiDelimiter(reader, symbol);
                         break;
                     case 5:
-                        String buffer = "" + (char) symbol;
+                        String buffer = "Illegal symbol at line " + stringIndex + " on column " + charIndex;
                         addLexCode(-1, buffer);
                         symbol = reader.read();
                         showError("Illegal symbol");
@@ -119,11 +133,13 @@ public class LexicalParser implements Parser {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        if (tables.constTableSearch(buffer))
-            lexCode = tables.getConstCode(buffer);
-        else
-            lexCode = tables.constTableAdd(buffer);
+        if (!buffer.equals("-")) {
+            if (tables.constTableSearch(buffer))
+                lexCode = tables.getConstCode(buffer);
+            else
+                lexCode = tables.constTableAdd(buffer);
+        } else
+            lexCode = '-';
 
         addLexCode(lexCode, buffer);
 
@@ -162,9 +178,9 @@ public class LexicalParser implements Parser {
         return symbol;
     }
 
-    public void commentHandling(BufferedReader r, int symbol) {
+    public int commentHandling(BufferedReader r, int symbol) {
         String errMessage = "";
-        int c;
+        int c = symbol;
         int commentStartStringIndex = stringIndex;
         int commentStartCharIndex = charIndex;
 
@@ -186,13 +202,16 @@ public class LexicalParser implements Parser {
                         if (c == -1) {
                             stringIndex = commentStartStringIndex;
                             charIndex = commentStartCharIndex;
-                            addLexCode(-1, "");
-                            errMessage = "*) expected but end of file found";
+                            errMessage = "*) expected but end of file found (comment start at line "
+                                    + stringIndex + " on column " + charIndex + ")";
+                            addLexCode(-1, errMessage);
                             break;
                         }
                     } while ((char) c != ')');
+                    c = r.read();
                 } else {
-                    addLexCode(c, "" + (char) c);
+                    addLexCode(symbol, "" + (char) symbol);
+                    return c;
                 }
         } catch (IOException e) {
             e.printStackTrace();
@@ -200,6 +219,8 @@ public class LexicalParser implements Parser {
 
         if (!errMessage.equals(""))
             showError(errMessage);
+
+        return c;
     }
 
     public int checkForMultiDelimiter(BufferedReader r, int symbol) {
@@ -219,7 +240,7 @@ public class LexicalParser implements Parser {
             }
             else {
                 buffer = "" + buffer.charAt(0);
-                charIndex--;
+                if (charIndex > 0) charIndex--;
             }
         } catch (IOException e) {
             e.printStackTrace();
