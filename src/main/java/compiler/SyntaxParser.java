@@ -61,6 +61,14 @@ public class SyntaxParser implements Parser {
         return errors;
     }
 
+    public HashMap<String, Integer> getConstTable() {
+        return constTable;
+    }
+
+    public HashMap<String, Integer> getIdentifiersTable() {
+        return identifiersTable;
+    }
+
     @Override
     public void parser() {
         int pointer = 0;
@@ -147,7 +155,8 @@ public class SyntaxParser implements Parser {
                     if (resultArray.get(pointer).getLexCode() > 1000) {
                         buffer = findIdentifier(tables.getIdentifiersTable(),
                                 resultArray.get(pointer).getLexCode());
-                        if (buffer == null || identifiersTable.get(buffer) != null) {
+                        if (buffer == null || identifiersTable.get(buffer) != null ||
+                                !identifiersTable.containsKey(buffer)) {
                             errorFlag = true;
                             break;
                         }
@@ -204,7 +213,7 @@ public class SyntaxParser implements Parser {
                     if (resultArray.get(pointer).getLexCode() > 1000) {
                         buffer = findIdentifier(tables.getIdentifiersTable(),
                                 resultArray.get(pointer).getLexCode());
-                        if (buffer == null) {
+                        if (buffer == null || !identifiersTable.containsKey(buffer)) {
                             errorFlag = true;
                             break;
                         }
@@ -263,7 +272,7 @@ public class SyntaxParser implements Parser {
                             " and column " + resultArray.get(pointer).getCharIndex());
             }
         }
-        buildXMLTree();
+        if (errors.size() == 0) buildXMLTree();
     }
 
     public boolean hasNext(int index) {
