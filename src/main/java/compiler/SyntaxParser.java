@@ -69,6 +69,10 @@ public class SyntaxParser implements Parser {
         return identifiersTable;
     }
 
+    public Tree<Integer> getParseTree() {
+        return parseTree;
+    }
+
     @Override
     public void parser() {
         int pointer = 0;
@@ -134,6 +138,7 @@ public class SyntaxParser implements Parser {
                         address = 3;
                         pointer++;
                         blockNode.addChild(401);
+                        currentNode = blockNode.addChild(STATEMENTS_LIST);
                     } else {
                         errorFlag = true;
                         break;
@@ -284,7 +289,8 @@ public class SyntaxParser implements Parser {
         if (resultArray.get(pointer).getLexCode() > 500) {
             constantBuffer = findIdentifier(tables.getConstTable(),
                     resultArray.get(pointer).getLexCode());
-            identifiersTable.put(buffer, Integer.parseInt(constantBuffer));
+            int num = (int) Double.parseDouble(constantBuffer);
+            identifiersTable.put(buffer, num);
             return true;
         }
         return false;
@@ -340,6 +346,7 @@ public class SyntaxParser implements Parser {
                 Transformer tr = TransformerFactory.newInstance().newTransformer();
                 tr.setOutputProperty(OutputKeys.INDENT, "yes");
                 tr.setOutputProperty(OutputKeys.METHOD, "xml");
+
                 tr.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
                 tr.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 
@@ -355,7 +362,7 @@ public class SyntaxParser implements Parser {
     }
 
     public void parseTree(Tree<Integer> currentNode, Element rootElem, Document dom) {
-        String textNode;
+        String textNode = "";
         Element e;
         if (currentNode.getData() < 0) {
             e = dom.createElement("non-terminal");
@@ -404,10 +411,26 @@ public class SyntaxParser implements Parser {
                 textNode = "IDENTIFIER";
                 break;
             case -15:
-                textNode = "UNSIGNED-INTEGER";
+                textNode = "INTEGER";
                 break;
             default:
-                textNode = currentNode.getData().toString();
+                if (currentNode.getData() > 1000) {
+                    for (String key : tables.getIdentifiersTable().keySet()) {
+                        if (tables.getIdentifiersTable().get(key).equals(currentNode.getData()))
+                            textNode = key;
+                    }
+                } else if (currentNode.getData() > 500) {
+                    for (String key : tables.getConstTable().keySet()) {
+                        if (tables.getConstTable().get(key).equals(currentNode.getData()))
+                            textNode = key;
+                    }
+                } else {
+                    for (String key : tables.getKeyWords().keySet()) {
+                        if (tables.getKeyWords().get(key).equals(currentNode.getData()))
+                            textNode = key;
+                    }
+                }
+                textNode += " (" + currentNode.getData().toString() + ")";
                 break;
         }
         e.setAttribute("name", textNode);
