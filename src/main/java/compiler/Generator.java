@@ -1,7 +1,117 @@
 package compiler;
 
+import java.io.*;
+
 /**
  * Created by santos on 5/21/16.
  */
 public class Generator {
+    private final int BLOCK = -3;
+    private final int DECLARATIONS = -4;
+    private final int STATEMENTS_LIST = -10;
+
+    private Tree<Integer> tree;
+    private Tables tables;
+
+    public Generator(Tree<Integer> tree, Tables tables) {
+        this.tree = tree;
+        this.tables = tables;
+    }
+
+    public void generate() throws IOException {
+        Tree<Integer> block = null;
+        Tree<Integer> constants = null;
+        Tree<Integer> statements = null;
+        String tempStr = "";
+        int lexemeCode;
+
+        File fout = new File("/home/santos/IdeaProjects/Translator/src/main/resources/result.asm");
+        FileOutputStream fos = new FileOutputStream(fout);
+        BufferedWriter file = new BufferedWriter(new OutputStreamWriter(fos));
+
+        if (!tree.isLeaf() && !tree.getChildren().get(0).isLeaf())
+           for(Tree<Integer> node : tree.getChildren().get(0).getChildren()) {
+               if (node.getData() == BLOCK) {
+                   block = node;
+                   break;
+               }
+           }
+
+        if (block != null && !block.isLeaf()) {
+            for (Tree<Integer> node : block.getChildren()) {
+                if (node.getData() == DECLARATIONS && !node.isLeaf()) {
+                    file.write("Data Segment");
+                    file.newLine();
+//                    if (!node.getChildren().get(0).getChildren().get(1).isLeaf())
+                        constants = node.getChildren().get(0).getChildren().get(1);
+                }
+
+                if (node.getData() == STATEMENTS_LIST && !node.isLeaf()) {
+                    statements = node;
+                }
+            }
+
+            if (constants != null) {
+                if (!constants.isLeaf()) {
+                    for (Tree<Integer> node : constants.getChildren()) {
+                        lexemeCode = node.getChildren().get(0).getChildren().get(0)
+                                .getChildren().get(0).getData();
+                        for (String key : tables.getIdentifiersTable().keySet()) {
+                            if (tables.getIdentifiersTable().get(key).equals(lexemeCode)) {
+                                tempStr = key + " dd ";
+                                break;
+                            }
+                        }
+                        lexemeCode = node.getChildren().get(2).getChildren().get(0)
+                                .getChildren().get(0).getData();
+                        for (String key : tables.getConstTable().keySet()) {
+                            if (tables.getConstTable().get(key).equals(lexemeCode)) {
+                                tempStr += key;
+                                double num = Double.parseDouble(key);
+                                if (num < -Math.pow(2, 31) || num > Math.pow(2, 31) - 1)
+                                    file.write("Error: integer type of constant expected\n");
+                                break;
+                            }
+                        }
+                        file.write(tempStr);
+                        file.newLine();
+                    }
+
+                }
+                file.write("Data ends");
+                file.newLine();
+            }
+
+
+            if (statements != null && !statements.isLeaf()) {
+                file.write("Code segment\nstart:\n");
+                for (Tree<Integer> node : statements.getChildren()) {
+                    lexemeCode = node.getChildren().get(0).getChildren().get(0)
+                            .getChildren().get(0).getData();
+                    for (String key : tables.getIdentifiersTable().keySet()) {
+                        if (tables.getIdentifiersTable().get(key).equals(lexemeCode)) {
+                            tempStr = "\tmov " + key + ", ";
+                            break;
+                        }
+                    }
+                    lexemeCode = node.getChildren().get(2).getChildren().get(0)
+                            .getChildren().get(0).getData();
+                    for (String key : tables.getConstTable().keySet()) {
+                        if (tables.getConstTable().get(key).equals(lexemeCode)) {
+                            tempStr += key;
+                            double num = Double.parseDouble(key);
+                            if (num < -Math.pow(2, 31) || num > Math.pow(2, 31) - 1)
+                                file.write("\tError:  integer type of constant expected\n");
+                            break;
+                        }
+                    }
+                    file.write(tempStr);
+                    file.newLine();
+                }
+                file.write("Code ends\nend start");
+            }
+        }
+
+        file.close();
+    }
 }
