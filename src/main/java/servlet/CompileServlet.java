@@ -1,5 +1,6 @@
 package servlet;
 
+import compiler.Generator;
 import compiler.LexicalParser;
 import compiler.SyntaxParser;
 
@@ -25,11 +26,18 @@ public class CompileServlet extends javax.servlet.http.HttpServlet {
         LexicalParser lexicalParser = new LexicalParser(is);
         lexicalParser.parser();
         HttpSession session = request.getSession();
+        
         if (lexicalParser.getErrors().size() == 0) {
             SyntaxParser syntaxParser = new SyntaxParser(lexicalParser.getLexCodesResultArray(),
                     lexicalParser.getTables());
             syntaxParser.parser();
+            session.setAttribute("identifierTable", syntaxParser.getIdentifiersTable());
+            session.setAttribute("constTable", syntaxParser.getConstTable());
             session.setAttribute("errors", syntaxParser.getErrors());
+            if (syntaxParser.getErrors().size() == 0) {
+                Generator generator = new Generator(syntaxParser.getParseTree(), lexicalParser.getTables());
+                generator.generate();
+            }
         } else {
             session.setAttribute("errors", lexicalParser.getErrors());
         }

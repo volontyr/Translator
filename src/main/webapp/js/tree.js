@@ -2,6 +2,17 @@
  * Created by santos on 4/18/16.
  */
 $(document).ready(function() {
+    //var xmlhttp;
+    //if (window.XMLHttpRequest) {
+    //    xmlhttp = new XMLHttpRequest();
+    //}
+    //else {
+    //    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+    //}
+    //xmlhttp.open("GET","resources/tree.xml",false);
+    //xmlhttp.send();
+    //var xml = xmlhttp.responseXML;
+    //alert(xml);
     $.ajax({
         type: "GET",
         url: "resources/tree.xml",

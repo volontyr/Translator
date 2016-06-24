@@ -1,9 +1,11 @@
 program pr;
 const
-    a = 2147483647;
+    b = -2;
+    n=9;
 begin
     (* assignments *)
-    v1 := -25;
+    v1= -25;
+    v2 := 17;
 
     (**
      * eaxample
@@ -12,5 +14,3 @@ begin
      * comment
      **)
 end.
-
-

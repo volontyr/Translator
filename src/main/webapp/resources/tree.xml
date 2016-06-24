@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<non-terminal name="SIGNAL-PROGRAM">
+    <non-terminal name="PROGRAM">
+        <terminal name="PROGRAM (403)"/>
+        <non-terminal name="PROCEDURE-IDENTIFIER">
+            <non-terminal name="IDENTIFIER">
+                <terminal name="PR (1001)"/>
+            </non-terminal>
+        </non-terminal>
+        <non-terminal name="BLOCK">
+            <non-terminal name="VARIABLE_DECLARATIONS_LIST">
+                <non-terminal name="VARIABLE_DECLARATION">
+                    <terminal name="VAR (405)"/>
+                    <non-terminal name="VARIABLE-IDENTIFIER">
+                        <non-terminal name="IDENTIFIER">
+                            <terminal name="D (1002)"/>
+                        </non-terminal>
+                    </non-terminal>
+                    <terminal name=" (58)"/>
+                    <non-terminal name="ATTRIBUTE">
+                        <terminal name="BYTE (407)"/>
+                    </non-terminal>
+                </non-terminal>
+            </non-terminal>
+            <non-terminal name="DECLARATIONS">
+                <non-terminal name="CONSTANT-DECLARATIONS">
+                    <terminal name="CONST (404)"/>
+                    <non-terminal name="CONSTANT-DECLARATIONS-LIST">
+                        <non-terminal name="CONSTANT-DECLARATION">
+                            <non-terminal name="CONSTANT-IDENTIFIER">
+                                <non-terminal name="IDENTIFIER">
+                                    <terminal name="A (1003)"/>
+                                </non-terminal>
+                            </non-terminal>
+                            <terminal name=" (61)"/>
+                            <non-terminal name="CONSTANT">
+                                <non-terminal name="INTEGER">
+                                    <terminal name="1 (501)"/>
+                                </non-terminal>
+                            </non-terminal>
+                        </non-terminal>
+                        <non-terminal name="CONSTANT-DECLARATION">
+                            <non-terminal name="CONSTANT-IDENTIFIER">
+                                <non-terminal name="IDENTIFIER">
+                                    <terminal name="B (1004)"/>
+                                </non-terminal>
+                            </non-terminal>
+                            <terminal name=" (61)"/>
+                            <non-terminal name="CONSTANT">
+                                <non-terminal name="INTEGER">
+                                    <terminal name="2147483648 (502)"/>
+                                </non-terminal>
+                            </non-terminal>
+                        </non-terminal>
+                        <non-terminal name="CONSTANT-DECLARATION">
+                            <non-terminal name="CONSTANT-IDENTIFIER">
+                                <non-terminal name="IDENTIFIER">
+                                    <terminal name="C (1005)"/>
+                                </non-terminal>
+                            </non-terminal>
+                            <terminal name=" (61)"/>
+                            <non-terminal name="CONSTANT">
+                                <non-terminal name="INTEGER">
+                                    <terminal name="-2147483649 (503)"/>
+                                </non-terminal>
+                            </non-terminal>
+                        </non-terminal>
+                    </non-terminal>
+                </non-terminal>
+            </non-terminal>
+            <terminal name="BEGIN (401)"/>
+            <non-terminal name="STATEMENTS-LIST">
+                <non-terminal name="STATEMENT">
+                    <non-terminal name="VARIABLE-IDENTIFIER">
+                        <non-terminal name="IDENTIFIER">
+                            <terminal name="V1 (1006)"/>
+                        </non-terminal>
+                    </non-terminal>
+                    <terminal name=" (301)"/>
+                    <non-terminal name="CONSTANT">
+                        <non-terminal name="INTEGER">
+                            <terminal name="-25 (504)"/>
+                        </non-terminal>
+                    </non-terminal>
+                </non-terminal>
+                <non-terminal name="STATEMENT">
+                    <non-terminal name="VARIABLE-IDENTIFIER">
+                        <non-terminal name="IDENTIFIER">
+                            <terminal name="V2 (1007)"/>
+                        </non-terminal>
+                    </non-terminal>
+                    <terminal name=" (301)"/>
+                    <non-terminal name="CONSTANT">
+                        <non-terminal name="INTEGER">
+                            <terminal name="17 (505)"/>
+                        </non-terminal>
+                    </non-terminal>
+                </non-terminal>
+            </non-terminal>
+            <terminal name="END (402)"/>
+        </non-terminal>
+    </non-terminal>
+</non-terminal>

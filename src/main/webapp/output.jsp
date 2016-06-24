@@ -13,12 +13,15 @@
 <html>
 <head>
     <title>Result</title>
-    <link type="text/css" rel="stylesheet" href="css/main.css" />
+    <link type="text/css" media="all" rel="stylesheet" href="css/bootstrap.css" />
+    <link type="text/css" media="all" rel="stylesheet" href="css/bootstrap.min.css" />
+    <link type="text/css" media="all" rel="stylesheet" href="css/main.css" />
 </head>
 <body>
 <%
     Tables tables = (Tables) session.getAttribute("tables");
     ArrayList<Lexeme> result = (ArrayList<Lexeme>) session.getAttribute("result");
+    ArrayList<String> errors = (ArrayList<String>) session.getAttribute("errors");
     HashMap<String, Integer> keyWord = tables.getKeyWords();
     HashMap<String, Integer> identifiers = tables.getIdentifiersTable();
     HashMap<String, Integer> constants = tables.getConstTable();
@@ -29,8 +32,8 @@
     Set<String> constKeys = constants.keySet();
     Set<String> delimiterKeys = multiDelimiters.keySet();
 %>
-<section class="container">
-    <div class="table">
+<section class="my-container">
+    <div class="my-table">
         <h4>Key words</h4>
         <table>
             <tr>
@@ -45,7 +48,7 @@
             <%}%>
         </table>
     </div>
-    <div class="table">
+    <div class="my-table">
         <h4>Identifiers</h4>
         <table>
             <tr>
@@ -60,7 +63,7 @@
             <%}%>
         </table>
     </div>
-    <div class="table">
+    <div class="my-table">
         <h4>Constants</h4>
         <table>
             <tr>
@@ -75,7 +78,7 @@
             <%}%>
         </table>
     </div>
-    <div class="table">
+    <div class="my-table">
         <h4>Multi char delimiters</h4>
         <table>
             <tr>
@@ -96,6 +99,18 @@
                 [<%=code.getStringIndex()%>, <%=code.getCharIndex()%>]</span>
         <%}%>
     </div>
+
+    <div class="result">
+        <%for (String error: errors) {%>
+            <span>error: <%=error%></span><br/>
+        <%}%>
+        <a href="index.jsp"><button class="btn btn-primary" type="button">to home page</button></a>
+        <%if (errors.size() == 0) {%>
+        <a href="tables.jsp"><button class="btn btn-success" type="button">view tables</button></a>
+        <a href="tree.jsp"><button class="btn btn-success" type="button">view tree</button></a>
+        <%}%>
+    </div>
+
 </section>
 </body>
 </html>

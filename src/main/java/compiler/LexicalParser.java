@@ -18,7 +18,7 @@ public class LexicalParser implements Parser {
     public LexicalParser(InputStream file) {
         this.file = new InputStreamReader(file);
         String[] multiCharDelimiters = {":="};
-        String[] keyWords = {"BEGIN", "END", "PROGRAM", "CONST"};
+        String[] keyWords = {"BEGIN", "END", "PROGRAM", "CONST", "VAR", "INTEGER", "BYTE"};
         tables = new Tables(keyWords, multiCharDelimiters);
         lexCodesResultArray = new ArrayList<>();
         errors = new ArrayList<>();

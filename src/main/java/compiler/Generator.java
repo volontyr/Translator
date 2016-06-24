@@ -9,6 +9,7 @@ public class Generator {
     private final int BLOCK = -3;
     private final int DECLARATIONS = -4;
     private final int STATEMENTS_LIST = -10;
+    private final int VARIABLE_DECLARATIONS_LIST = -16;
 
     private Tree<Integer> tree;
     private Tables tables;
@@ -22,8 +23,10 @@ public class Generator {
         Tree<Integer> block = null;
         Tree<Integer> constants = null;
         Tree<Integer> statements = null;
+        Tree<Integer> variable = null;
         String tempStr = "";
         int lexemeCode;
+        boolean data_segment_start = false;
 
         File fout = new File("/home/santos/IdeaProjects/Translator/src/main/resources/result.asm");
         FileOutputStream fos = new FileOutputStream(fout);
@@ -40,15 +43,47 @@ public class Generator {
         if (block != null && !block.isLeaf()) {
             for (Tree<Integer> node : block.getChildren()) {
                 if (node.getData() == DECLARATIONS && !node.isLeaf()) {
-                    file.write("Data Segment");
-                    file.newLine();
+                    if (!data_segment_start) {
+                        file.write("Data Segment");
+                        file.newLine();
+                        data_segment_start = true;
+                    }
+                    data_segment_start = true;
 //                    if (!node.getChildren().get(0).getChildren().get(1).isLeaf())
-                        constants = node.getChildren().get(0).getChildren().get(1);
+                    constants = node.getChildren().get(0).getChildren().get(1);
+                }
+
+                if (node.getData() == VARIABLE_DECLARATIONS_LIST && !node.isLeaf()) {
+                    if (!data_segment_start) {
+                        file.write("Data Segment");
+                        file.newLine();
+                        data_segment_start = true;
+                    }
+                    variable = node.getChildren().get(0);
                 }
 
                 if (node.getData() == STATEMENTS_LIST && !node.isLeaf()) {
                     statements = node;
                 }
+            }
+
+            if (variable != null && !variable.isLeaf()) {
+
+                lexemeCode = variable.getChildren().get(1).getChildren().get(0)
+                        .getChildren().get(0).getData();
+                for (String key : tables.getIdentifiersTable().keySet()) {
+                    if (tables.getIdentifiersTable().get(key).equals(lexemeCode)) {
+                        tempStr = key;
+                        break;
+                    }
+                }
+                lexemeCode = variable.getChildren().get(3).getChildren().get(0).getData();
+                if (lexemeCode == 406)
+                    tempStr += " dd ?";
+                else if (lexemeCode == 407)
+                    tempStr += " db ?";
+                file.write(tempStr);
+                file.newLine();
             }
 
             if (constants != null) {
@@ -78,10 +113,12 @@ public class Generator {
                     }
 
                 }
+            }
+
+            if (data_segment_start) {
                 file.write("Data ends");
                 file.newLine();
             }
-
 
             if (statements != null && !statements.isLeaf()) {
                 file.write("Code segment\nstart:\n");

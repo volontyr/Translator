@@ -35,6 +35,9 @@ public class SyntaxParser implements Parser {
     private final int PROCEDURE_IDENTIFIER = -13;
     private final int IDENTIFIER = -14;
     private final int UNSIGNED_INTEGER = -15;
+    private final int VARIABLE_DECLARATIONS_LIST = -16;
+    private final int VARIABLE_DECLARATION = -17;
+    private final int ATTRIBUTE = -18;
 
     private ArrayList<Lexeme> resultArray;
     private ArrayList<String> errors;
@@ -127,7 +130,13 @@ public class SyntaxParser implements Parser {
                     currentNode = currentNode.addChild(BLOCK);
                     blockNode = currentNode;
 
-                    if (resultArray.get(pointer).getLexCode() == 404) {
+                    if (resultArray.get(pointer).getLexCode() == 405) {
+                        address = 4;
+                        pointer++;
+                        currentNode = currentNode.addChild(VARIABLE_DECLARATIONS_LIST)
+                                                .addChild(VARIABLE_DECLARATION)
+                                                .addChild(405).getParent();
+                    } else if (resultArray.get(pointer).getLexCode() == 404) {
                         address = 2;
                         pointer++;
                         currentNode = currentNode.addChild(DECLARATIONS)
@@ -255,6 +264,64 @@ public class SyntaxParser implements Parser {
 
                         pointer++;
                         address = 3;
+                    } else {
+                        errorFlag = true;
+                        break;
+                    }
+
+                    break;
+                case 4:
+                    if (hasNext(pointer) && resultArray.get(pointer).getLexCode() == 404) {
+                        address = 2;
+                        pointer++;
+                        currentNode = blockNode.addChild(DECLARATIONS)
+                                            .addChild(CONSTANT_DECLARATIONS)
+                                            .addChild(404);
+                        currentNode = currentNode.getParent().addChild(CONSTANT_DECLARATIONS_LIST);
+                        break;
+                    }
+                    if (!hasNext(pointer + 3)) {
+                        errorFlag = true;
+                        break;
+                    }
+                    if (resultArray.get(pointer).getLexCode() > 1000) {
+                        buffer = findIdentifier(tables.getIdentifiersTable(),
+                                resultArray.get(pointer).getLexCode());
+                        if (buffer == null || !identifiersTable.containsKey(buffer)) {
+                            errorFlag = true;
+                            break;
+                        }
+                        pointer++;
+                    } else {
+                        errorFlag = true;
+                        break;
+                    }
+
+                    if (resultArray.get(pointer).getLexCode() == 58) {
+                        pointer++;
+                    } else {
+                        errorFlag = true;
+                        break;
+                    }
+
+                    if (resultArray.get(pointer).getLexCode() == 406 ||
+                            resultArray.get(pointer).getLexCode() == 407) {
+                        pointer++;
+                    } else {
+                        errorFlag = true;
+                        break;
+                    }
+
+                    if (resultArray.get(pointer).getLexCode() == 59) {
+                        currentNode.addChild(VARIABLE_IDENTIFIER).addChild(IDENTIFIER)
+                                .addChild(resultArray.get(pointer-3).getLexCode());
+                        currentNode.addChild(58);
+                        currentNode.addChild(ATTRIBUTE)
+                                .addChild(resultArray.get(pointer-1).getLexCode());
+//                        currentNode = currentNode.getParent();
+
+                        pointer++;
+                        address = 4;
                     } else {
                         errorFlag = true;
                         break;
@@ -412,6 +479,15 @@ public class SyntaxParser implements Parser {
                 break;
             case -15:
                 textNode = "INTEGER";
+                break;
+            case -16:
+                textNode = "VARIABLE_DECLARATIONS_LIST";
+                break;
+            case -17:
+                textNode = "VARIABLE_DECLARATION";
+                break;
+            case -18:
+                textNode = "ATTRIBUTE";
                 break;
             default:
                 if (currentNode.getData() > 1000) {

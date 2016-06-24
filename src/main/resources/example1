@@ -1,9 +1,13 @@
 program pr;
+var d : byte;
 const
-    a = 2147483647;
+    a = 1;
+    b = 2147483648;
+    c = -2147483649;
 begin
     (* assignments *)
     v1 := -25;
+    v2 := 17;
 
     (**
      * eaxample
@@ -12,5 +16,3 @@ begin
      * comment
      **)
 end.
-
-
